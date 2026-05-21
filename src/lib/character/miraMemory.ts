@@ -1,9 +1,16 @@
+import { MiraLifeEvent } from "./miraLife";
+
 export type MiraMemory = {
   userName?: string;
   knownFacts: string[];
   emotionalNotes: string[];
   lastSeenAt?: string;
   messageCount: number;
+  cycleSeedDay?: number;
+  currentEvent?: MiraLifeEvent;
+  lastEventCheckDate?: string;
+  relationshipSummary?: string;
+  lastInteractionStatus?: string;
 };
 
 export const defaultMemory: MiraMemory = {

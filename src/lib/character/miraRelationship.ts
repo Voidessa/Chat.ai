@@ -36,22 +36,29 @@ export function calculateStage(rel: MiraRelationship): MiraRelationship["stage"]
 
 export function updateRelationshipState(
   current: MiraRelationship,
-  userMessage: string
+  userMessage: string,
+  userIgnored: boolean = false
 ): MiraRelationship {
   const next = { ...current };
   const msg = userMessage.toLowerCase().trim();
 
   // Reset userAskedToStop if they write a normal message after asking to stop
-  // But let's keep it simple: if they write again, they broke the silence
   if (next.userAskedToStop && msg.length > 0) {
     next.userAskedToStop = false;
   }
 
-  const rudeWords = ["отстань", "заткнись", "пошла", "мне пох", "нет отстань", "хер", "блин", "бесишь"];
+  // Silence/Ignore penalty
+  if (userIgnored) {
+    next.warmth = Math.max(0, next.warmth - 8);
+    next.respect = Math.max(0, next.respect - 5);
+    next.distance = Math.min(100, next.distance + 10);
+  }
+
+  const rudeWords = ["отстань", "заткнись", "пошла", "мне пох", "нет отстань", "хер", "бесишь"];
   const extremeInsults = ["мразь", "шлюха", "дура", "конченая", "тварь", "уебище", "блядина", "ебанутая", "шмара", "нахуй", "пиздец", "хуй", "блять", "сука", "еба", "ебать", "пидор", "гандон", "чмо"];
-  const dryWords = ["ок", "ясно", "норм", "че", "привет", "как дела", "да", "нет"];
-  const personalWords = ["устал", "работал", "мне тяжело", "переживаю", "не знаю что делать", "у меня проект", "бизнес"];
-  const complimentWords = ["красивая", "милая", "нравишься", "супер", "умная", "прекрасна"];
+  const dryWords = ["ок", "ясно", "норм", "че", "привет", "как дела", "да", "нет", "понятно", "пон", "ладно", "ладн"];
+  const personalWords = ["устал", "работал", "мне тяжело", "переживаю", "не знаю что делать", "у меня проект", "бизнес", "проблемы", "сложно"];
+  const complimentWords = ["красивая", "милая", "нравишься", "супер", "умная", "прекрасна", "хорошая", "классная"];
   const apologyWords = ["прости", "извини", "сорян", "виноват", "прощения", "я не прав", "больше не буду"];
 
   if (extremeInsults.some(w => msg.includes(w))) {
@@ -71,29 +78,32 @@ export function updateRelationshipState(
       next.userAskedToStop = true;
     }
   } else if (apologyWords.some(w => msg.includes(w))) {
-    // медленно прощает
     if (next.irritation > 70) {
-      next.irritation = Math.max(0, next.irritation - 10); // ломается сильно
+      next.irritation = Math.max(0, next.irritation - 10);
     } else if (next.irritation > 40) {
-      next.irritation = Math.max(0, next.irritation - 20); // ломается средне
+      next.irritation = Math.max(0, next.irritation - 20);
     } else {
-      next.irritation = 0; // прощает окончательно
-      next.warmth = Math.min(100, next.warmth + 5);
+      next.irritation = 0;
+      next.warmth = Math.min(100, next.warmth + 8);
     }
-  } else if (dryWords.includes(msg)) {
-    next.curiosity = Math.min(100, next.curiosity + 5);
+  } else if (dryWords.includes(msg) || (msg.length > 0 && msg.length < 5)) {
+    // Dry response: drop warmth and curiosity, increase distance
+    next.warmth = Math.max(0, next.warmth - 10);
+    next.curiosity = Math.max(0, next.curiosity - 8);
+    next.distance = Math.min(100, next.distance + 15);
   } else if (personalWords.some(w => msg.includes(w))) {
     next.trust = Math.min(100, next.trust + 8);
     next.warmth = Math.min(100, next.warmth + 8);
     next.distance = Math.max(0, next.distance - 10);
   } else if (complimentWords.some(w => msg.includes(w))) {
     next.curiosity = Math.min(100, next.curiosity + 5);
-    next.warmth = Math.min(100, next.warmth + 3);
+    next.warmth = Math.min(100, next.warmth + 5);
+    next.respect = Math.min(100, next.respect + 2);
   } else if (msg.length > 5) {
-    next.trust = Math.min(100, next.trust + 5);
-    next.respect = Math.min(100, next.respect + 5);
-    next.curiosity = Math.min(100, next.curiosity + 5);
-    next.warmth = Math.min(100, next.warmth + 3);
+    next.trust = Math.min(100, next.trust + 4);
+    next.respect = Math.min(100, next.respect + 4);
+    next.curiosity = Math.min(100, next.curiosity + 4);
+    next.warmth = Math.min(100, next.warmth + 2);
   }
 
   if (next.irritation >= 100) {

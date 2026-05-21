@@ -8,4 +8,6 @@ export type Message = {
   status?: "sent" | "read";
   audioUrl?: string;
   aiReaction?: "heart" | "laugh" | "sad" | "angry";
+  userReaction?: "thumbsup" | "heart" | "laugh" | "sad" | "angry" | "fire" | "clap";
+  pinned?: boolean;
 };

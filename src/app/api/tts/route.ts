@@ -33,8 +33,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Failed to fetch TTS" }, { status: 500 });
     }
 
-    const audioBuffer = await response.arrayBuffer();
-    return new NextResponse(audioBuffer, {
+    return new Response(response.body, {
       headers: {
         "Content-Type": "audio/mpeg"
       }

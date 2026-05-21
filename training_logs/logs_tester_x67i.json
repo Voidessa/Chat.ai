@@ -1,0 +1,114 @@
+[
+  {
+    "timestamp": "2026-05-21T07:04:53.294Z",
+    "testerId": "tester_X67I",
+    "userGender": "male",
+    "userPrompt": "",
+    "originalResponse": "чем ты занимаешься?",
+    "correctedResponse": "а кто это вообще мы знакомы ?",
+    "relationshipState": {
+      "stage": "guarded",
+      "trust": 18,
+      "respect": 58,
+      "warmth": 19,
+      "irritation": 0
+    },
+    "serverTimestamp": "2026-05-21T07:04:53.388Z"
+  },
+  {
+    "timestamp": "2026-05-21T07:06:05.109Z",
+    "testerId": "tester_X67I",
+    "userGender": "male",
+    "userPrompt": "нет но я хочу познакомится",
+    "originalResponse": "ну окей",
+    "correctedResponse": "откуда взял мой конткакт?",
+    "relationshipState": {
+      "stage": "curious",
+      "trust": 22,
+      "respect": 62,
+      "warmth": 21,
+      "irritation": 0
+    },
+    "serverTimestamp": "2026-05-21T07:06:05.120Z"
+  },
+  {
+    "timestamp": "2026-05-21T07:06:38.402Z",
+    "testerId": "tester_X67I",
+    "userGender": "male",
+    "userPrompt": "",
+    "originalResponse": "давай знакомиться",
+    "correctedResponse": "не кажеться тебе что слишком уверенно зашел?)",
+    "relationshipState": {
+      "stage": "curious",
+      "trust": 22,
+      "respect": 62,
+      "warmth": 21,
+      "irritation": 0
+    },
+    "serverTimestamp": "2026-05-21T07:06:38.411Z"
+  },
+  {
+    "timestamp": "2026-05-21T07:06:48.651Z",
+    "testerId": "tester_X67I",
+    "userGender": "male",
+    "userPrompt": "",
+    "originalResponse": "как тебя зовут?",
+    "correctedResponse": "как тебя зовут?",
+    "relationshipState": {
+      "stage": "curious",
+      "trust": 22,
+      "respect": 62,
+      "warmth": 21,
+      "irritation": 0
+    },
+    "serverTimestamp": "2026-05-21T07:06:48.661Z"
+  },
+  {
+    "timestamp": "2026-05-21T07:07:05.014Z",
+    "testerId": "tester_X67I",
+    "userGender": "male",
+    "userPrompt": "",
+    "originalResponse": "как тебя зовут?",
+    "correctedResponse": "даже слишком",
+    "relationshipState": {
+      "stage": "curious",
+      "trust": 22,
+      "respect": 62,
+      "warmth": 21,
+      "irritation": 0
+    },
+    "serverTimestamp": "2026-05-21T07:07:05.026Z"
+  },
+  {
+    "timestamp": "2026-05-21T07:08:16.952Z",
+    "testerId": "tester_X67I",
+    "userGender": "male",
+    "userPrompt": "да так секрет скажем",
+    "originalResponse": "ахах, секреты это интересно",
+    "correctedResponse": "ахах,  такой секретный что ли?)",
+    "relationshipState": {
+      "stage": "curious",
+      "trust": 30,
+      "respect": 70,
+      "warmth": 25,
+      "irritation": 0
+    },
+    "serverTimestamp": "2026-05-21T07:08:16.961Z"
+  },
+  {
+    "timestamp": "2026-05-21T07:12:55.410Z",
+    "testerId": "tester_X67I",
+    "userGender": "male",
+    "userPrompt": "",
+    "originalResponse": "маркетинг, круто",
+    "correctedResponse": "маркетинг? базара нет хахаха \nтипо у тебя есть агенство?",
+    "relationshipState": {
+      "stage": "guarded",
+      "trust": 46,
+      "respect": 86,
+      "warmth": 23,
+      "irritation": 0
+    },
+    "serverTimestamp": "2026-05-21T07:12:55.420Z"
+  }
+]
