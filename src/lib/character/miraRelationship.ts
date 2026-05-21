@@ -15,12 +15,12 @@ export type MiraRelationship = {
 
 export const defaultRelationship: MiraRelationship = {
   stage: "guarded",
-  trust: 10,
-  respect: 50,
-  curiosity: 35,
-  warmth: 15,
+  trust: 5,
+  respect: 20,
+  curiosity: 10,
+  warmth: 0,
   irritation: 0,
-  distance: 70,
+  distance: 85,
   userAskedToStop: false
 };
 
@@ -37,7 +37,8 @@ export function calculateStage(rel: MiraRelationship): MiraRelationship["stage"]
 export function updateRelationshipState(
   current: MiraRelationship,
   userMessage: string,
-  userIgnored: boolean = false
+  userIgnored: boolean = false,
+  messageCount: number = 0
 ): MiraRelationship {
   const next = { ...current };
   const msg = userMessage.toLowerCase().trim();
@@ -109,6 +110,14 @@ export function updateRelationshipState(
   if (next.irritation >= 100) {
     next.isBlocked = true;
     next.userAskedToStop = true;
+  }
+
+  // Ограничитель теплоты для начала общения (эффект "холодного старта")
+  if (messageCount < 25) {
+    next.warmth = Math.min(next.warmth, 20); // Не выше 2/10
+    next.trust = Math.min(next.trust, 30);
+    next.respect = Math.min(next.respect, 30);
+    next.curiosity = Math.min(next.curiosity, 15);
   }
 
   next.stage = calculateStage(next);

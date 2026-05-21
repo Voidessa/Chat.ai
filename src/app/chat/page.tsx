@@ -427,10 +427,10 @@ export default function ChatPage() {
             setOnlineStatus("печатает...");
           }
 
-          let typingTime = 1000;
-          if (text.length > 100) typingTime = 2500 + Math.random() * 2000;
-          else if (text.length > 40) typingTime = 1500 + Math.random() * 1500;
-          else typingTime = 800 + Math.random() * 800;
+          let typingTime = 500;
+          if (text.length > 100) typingTime = 1800 + Math.random() * 1500;
+          else if (text.length > 40) typingTime = 1000 + Math.random() * 1000;
+          else typingTime = 500 + Math.random() * 600;
           
           if (i === 0) typingTime = typingTime * 0.5;
 
@@ -511,7 +511,7 @@ export default function ChatPage() {
     const newMemory = updateMemoryFromUserMessage(memoryRef.current, content);
     setMemory(newMemory);
 
-    const newRelationship = updateRelationshipState(relationshipRef.current, content, wasIgnoringRef.current);
+    const newRelationship = updateRelationshipState(relationshipRef.current, content, wasIgnoringRef.current, newMemory.messageCount);
     setRelationship(newRelationship);
     
     if (newRelationship.userAskedToStop || newRelationship.irritation > 70) {
@@ -537,9 +537,19 @@ export default function ChatPage() {
 
     if (replyTimerRef.current) clearTimeout(replyTimerRef.current);
     
-    // 5-10% chance to reply very quickly, 90% chance to wait 15-30 seconds so user can send more
-    const isInstant = Math.random() < 0.10; 
-    const replyDelay = isInstant ? (2000 + Math.random() * 3000) : (15000 + Math.random() * 15000);
+    // Динамическое время ответа: чаще быстро, но иногда с задержками
+    const randDelay = Math.random();
+    let replyDelay;
+    if (randDelay < 0.60) {
+      // 60% chance to reply very quickly (1.5s to 4s)
+      replyDelay = 1500 + Math.random() * 2500;
+    } else if (randDelay < 0.85) {
+      // 25% chance to reply normally (4.5s to 8s)
+      replyDelay = 4500 + Math.random() * 3500;
+    } else {
+      // 15% chance to wait a bit longer (9s to 15s)
+      replyDelay = 9000 + Math.random() * 6000;
+    }
     
     replyTimerRef.current = setTimeout(() => {
       executeAiReply();
