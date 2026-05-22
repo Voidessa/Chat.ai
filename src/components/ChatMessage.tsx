@@ -131,6 +131,64 @@ export default function ChatMessage({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showMenu, setShowMenu] = useState(false);
+  
+  const [swipeOffset, setSwipeOffset] = useState(0);
+  const touchStartRef = useRef<{x: number, y: number, time: number} | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isSwipingRef = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+    isSwipingRef.current = false;
+    
+    longPressTimerRef.current = setTimeout(() => {
+      if (!isSwipingRef.current) {
+        setShowMenu(true);
+      }
+    }, 450); // 450ms for long press
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    
+    const deltaX = e.touches[0].clientX - touchStartRef.current.x;
+    const deltaY = e.touches[0].clientY - touchStartRef.current.y;
+    
+    // Cancel swipe/longpress on vertical scroll
+    if (Math.abs(deltaY) > 15) {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      setSwipeOffset(0);
+      return;
+    }
+    
+    // Swipe left to reply
+    if (deltaX < -5) {
+      isSwipingRef.current = true;
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+      
+      const boundedOffset = Math.max(-65, deltaX);
+      setSwipeOffset(boundedOffset);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    
+    if (swipeOffset <= -40 && onReply) {
+      onReply(message);
+    }
+    
+    setSwipeOffset(0);
+    touchStartRef.current = null;
+    setTimeout(() => { isSwipingRef.current = false; }, 100);
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onReact && !isUser) {
+      onReact(message.id, "heart");
+    }
+  };
 
   // Format message timestamp in HH:MM format
   const messageTime = useMemo(() => {
@@ -165,7 +223,26 @@ export default function ChatMessage({
   const showReactions = message.aiReaction || message.userReaction;
 
   return (
-    <div className={`flex w-full ${isUser ? "justify-end" : "justify-start"} mb-5 relative group`}>
+    <div 
+      className={`flex w-full ${isUser ? "justify-end" : "justify-start"} mb-5 relative group overflow-visible`}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onDoubleClick={handleDoubleClick}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setShowMenu(true);
+      }}
+    >
+      {/* Container that slides when swiped */}
+      <div 
+        className="flex w-full relative z-10"
+        style={{ 
+          transform: `translateX(${swipeOffset}px)`, 
+          transition: swipeOffset !== 0 ? 'none' : 'transform 0.2s cubic-bezier(0.1, 0.7, 0.1, 1)',
+          justifyContent: isUser ? "flex-end" : "flex-start"
+        }}
+      >
       {/* Background click interceptor for dropdown */}
       {showMenu && (
         <div 
@@ -197,10 +274,6 @@ export default function ChatMessage({
 
       {/* Message Bubble Wrapper */}
       <div 
-        onContextMenu={(e) => {
-          e.preventDefault();
-          setShowMenu(true);
-        }}
         className={`max-w-[85%] md:max-w-[65%] px-3.5 py-2 rounded-2xl text-[15px] leading-relaxed shadow-md relative ${
           isUser 
             ? "bg-[#2b5278] text-white rounded-br-sm" 
@@ -495,6 +568,20 @@ export default function ChatMessage({
           </svg>
         </button>
       )}
+
+      </div> {/* End of sliding container */}
+      
+      {/* Reply Icon Background Layer (revealed during swipe) */}
+      <div 
+        className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-8 rounded-full bg-white/10 text-white/90 z-0 transition-opacity"
+        style={{ opacity: swipeOffset < -30 ? 1 : 0 }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 17 4 12 9 7"></polyline>
+          <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+        </svg>
+      </div>
+
     </div>
   );
 }
