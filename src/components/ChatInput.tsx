@@ -79,7 +79,7 @@ export default function ChatInput({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
-            className="w-full bg-transparent text-white/90 placeholder-white/30 resize-none outline-none py-2.5 px-3 max-h-[120px] min-h-[44px] text-[15px] font-normal disabled:opacity-50"
+            className="w-full bg-transparent text-white/90 placeholder-white/30 resize-none outline-none py-2.5 px-3 max-h-[120px] min-h-[44px] text-[16px] md:text-[15px] font-normal disabled:opacity-50"
             rows={1}
           />
           <button

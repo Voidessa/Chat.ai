@@ -68,6 +68,14 @@ export default function ChatPage() {
   const [testerId, setTesterId] = useState("");
   const [userGender, setUserGender] = useState<"male" | "female">("male");
 
+  // Feedback states
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackError, setFeedbackError] = useState("");
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+
   // Ignore / Silence detection refs
   const userIgnoredLastMessageRef = useRef(false);
   const wasIgnoringRef = useRef(false);
@@ -638,6 +646,70 @@ export default function ChatPage() {
     downloadAnchor.remove();
   };
 
+  const loadFeedbacks = useCallback(async () => {
+    try {
+      const response = await fetch("/api/feedback");
+      if (response.ok) {
+        const data = await response.json();
+        setFeedbacks(data);
+      }
+    } catch (e) {
+      console.error("Failed to load feedbacks", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (sidebarOpen) {
+      loadFeedbacks();
+    }
+  }, [sidebarOpen, loadFeedbacks]);
+
+  const handleSendFeedback = async () => {
+    if (!feedbackMessage.trim()) return;
+    setIsSendingFeedback(true);
+    setFeedbackError("");
+    setFeedbackSuccess(false);
+
+    try {
+      const response = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: feedbackMessage,
+          user: testerId || "anonymous",
+          gender: userGender,
+          userAgent: typeof window !== "undefined" ? window.navigator.userAgent : "unknown"
+        })
+      });
+
+      if (!response.ok) throw new Error("Failed to send feedback");
+
+      setFeedbackSuccess(true);
+      setFeedbackMessage("");
+      loadFeedbacks();
+      setTimeout(() => {
+        setFeedbackOpen(false);
+        setFeedbackSuccess(false);
+      }, 2000);
+    } catch (err) {
+      setFeedbackError("Не удалось отправить отзыв. Пожалуйста, попробуйте еще раз.");
+      console.error(err);
+    } finally {
+      setIsSendingFeedback(false);
+    }
+  };
+
+  const handleExportFeedback = () => {
+    if (feedbacks.length === 0) return;
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(feedbacks, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `project_feedback_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   const handleReply = (msg: Message) => {
     setReplyToMessage(msg);
   };
@@ -807,9 +879,9 @@ export default function ChatPage() {
   if (!isMounted) return null;
 
   return (
-    <div className="flex h-screen relative bg-[#0e1621] overflow-hidden select-none">
+    <div className="flex h-[100dvh] relative bg-[#0e1621] overflow-hidden select-none">
       {/* Main chat layout */}
-      <div className={`flex-1 flex flex-col h-full transition-all duration-300 relative ${sidebarOpen ? "mr-80" : ""}`}>
+      <div className={`flex-1 flex flex-col h-full transition-all duration-300 relative ${sidebarOpen ? "lg:mr-80" : ""}`}>
         <ChatHeader 
           onClear={handleClear} 
           onResetMemory={handleResetMemory} 
@@ -886,7 +958,7 @@ export default function ChatPage() {
           </div>
         </main>
 
-        <div className={`fixed bottom-0 left-0 z-40 transition-all duration-300 ${sidebarOpen ? "right-80" : "right-0"}`}>
+        <div className={`fixed bottom-0 left-0 z-40 transition-all duration-300 ${sidebarOpen ? "lg:right-80" : "right-0"}`}>
           <ChatInput 
             onSend={handleSend} 
             disabled={!!relationship.isBlocked} 
@@ -899,13 +971,13 @@ export default function ChatPage() {
 
       {/* Tutor Panel Sidebar */}
       {sidebarOpen && (
-        <div className="fixed top-0 right-0 bottom-0 w-80 bg-[#17212b] border-l border-[#101921] z-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-250">
+        <div className="fixed top-0 right-0 bottom-0 w-full sm:w-80 bg-[#17212b] border-l border-[#101921] z-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-250">
           {/* Header */}
           <div className="h-16 px-4 border-b border-[#101921] flex items-center justify-between">
             <h3 className="text-white font-medium text-sm">Панель куратора ИИ</h3>
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="text-white/50 hover:text-white transition-colors"
+              className="text-white/50 hover:text-white transition-colors cursor-pointer"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -930,7 +1002,7 @@ export default function ChatPage() {
                   setTesterId(val);
                   localStorage.setItem("velora_tester_id", val);
                 }}
-                className="w-full bg-[#1c2a38] border border-white/10 rounded-lg px-3 py-1.5 text-white text-xs focus:outline-none focus:border-blue-500/50 font-normal"
+                className="w-full bg-[#1c2a38] border border-white/10 rounded-lg px-3 py-1.5 text-white text-[16px] md:text-xs focus:outline-none focus:border-blue-500/50 font-normal"
                 placeholder="Например: Masha или tester_1"
               />
             </div>
@@ -1060,7 +1132,7 @@ export default function ChatPage() {
                             return updated;
                           });
                         }}
-                        className="text-white/40 hover:text-rose-400 font-bold"
+                        className="text-white/40 hover:text-rose-400 font-bold cursor-pointer"
                       >
                         ×
                       </button>
@@ -1085,7 +1157,7 @@ export default function ChatPage() {
                   localStorage.setItem("velora_custom_rules", e.target.value);
                 }}
                 placeholder="Например: Не пиши смайлики. Отвечай жестче. Используй сленг 'треш'."
-                className="w-full bg-[#1c2a38] border border-white/10 rounded-xl p-3 text-white text-xs focus:outline-none focus:border-blue-500/50 resize-none font-normal leading-normal"
+                className="w-full bg-[#1c2a38] border border-white/10 rounded-xl p-3 text-white text-[16px] focus:outline-none focus:border-blue-500/50 resize-none font-normal leading-normal"
                 rows={5}
               />
               <div className="text-[10px] text-neutral-500 leading-normal">
@@ -1108,7 +1180,7 @@ export default function ChatPage() {
                         localStorage.removeItem("velora_training_logs");
                       }
                     }}
-                    className="text-[10px] text-rose-400 hover:underline animate-in fade-in"
+                    className="text-[10px] text-rose-400 hover:underline animate-in fade-in cursor-pointer"
                   >
                     Очистить
                   </button>
@@ -1123,9 +1195,51 @@ export default function ChatPage() {
                 Скачать журнал правок (.JSON)
               </button>
             </div>
+
+            {/* Project Feedbacks */}
+            <div className="space-y-3 bg-[#24303f]/30 border border-white/5 p-3.5 rounded-xl">
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-semibold flex items-center">
+                  <span>Отзывы по проекту: {feedbacks.length}</span>
+                </span>
+                {feedbacks.length > 0 && (
+                  <button 
+                    onClick={loadFeedbacks}
+                    className="text-[10px] text-blue-400 hover:underline animate-in fade-in cursor-pointer"
+                  >
+                    Обновить
+                  </button>
+                )}
+              </div>
+              
+              {feedbacks.length > 0 ? (
+                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                  {feedbacks.slice().reverse().map((f: any) => (
+                    <div key={f.id} className="text-xs bg-black/25 border border-white/5 p-2 rounded-lg space-y-1">
+                      <div className="flex justify-between text-[10px] text-neutral-500">
+                        <span className="font-semibold text-neutral-400 truncate max-w-[120px]">{f.user}</span>
+                        <span>{new Date(f.timestamp).toLocaleDateString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</span>
+                      </div>
+                      <p className="text-white/80 font-normal leading-normal whitespace-pre-wrap">{f.message}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-neutral-500 italic">Отзывов пока нет</div>
+              )}
+
+              <button
+                onClick={handleExportFeedback}
+                disabled={feedbacks.length === 0}
+                className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white rounded-lg text-xs font-semibold tracking-wide transition-all shadow-md active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+              >
+                Скачать отзывы (.JSON)
+              </button>
+            </div>
           </div>
         </div>
       )}
+      
       {/* Telegram-style Delete message modal */}
       {deleteModalOpen && messageToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1171,6 +1285,90 @@ export default function ChatPage() {
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition-colors cursor-pointer"
               >
                 Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating feedback button */}
+      <button
+        onClick={() => setFeedbackOpen(true)}
+        className={`fixed z-40 transition-all duration-300 bg-[#17212b]/90 backdrop-blur-md border border-white/10 hover:border-white/20 text-white rounded-full px-3.5 py-2 shadow-2xl flex items-center justify-center gap-2 hover:scale-105 active:scale-95 cursor-pointer select-none text-xs font-semibold ${
+          sidebarOpen ? "right-4 lg:right-[336px] bottom-[84px]" : "right-4 bottom-[84px]"
+        }`}
+        title="Обратная связь по проекту"
+      >
+        <svg className="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+        </svg>
+        <span>Обратная связь</span>
+      </button>
+
+      {/* Project Feedback Modal */}
+      {feedbackOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => {
+              if (!isSendingFeedback) setFeedbackOpen(false);
+            }}
+          />
+          <div className="bg-[#1c242f] border border-white/10 w-full max-w-md rounded-2xl shadow-2xl z-10 p-6 overflow-hidden text-left animate-in scale-in duration-150">
+            <h3 className="text-white text-[16px] font-semibold mb-2">Обратная связь по проекту</h3>
+            <p className="text-white/60 text-xs leading-relaxed mb-4">
+              Напишите, что бы вы хотели добавить, убрать или улучшить. Ваше мнение очень важно!
+            </p>
+            
+            <textarea
+              value={feedbackMessage}
+              onChange={(e) => setFeedbackMessage(e.target.value)}
+              placeholder="Например: Добавить стикеры, изменить шрифт или поправить поведение Миры..."
+              className="w-full bg-[#0e1621] border border-white/10 rounded-xl p-3 text-white text-[16px] focus:outline-none focus:border-blue-500/50 resize-none font-normal leading-normal placeholder:text-neutral-600 mb-4"
+              rows={5}
+              disabled={isSendingFeedback || feedbackSuccess}
+              autoFocus
+            />
+
+            {feedbackError && (
+              <p className="text-xs text-rose-400 mb-3 animate-pulse">
+                {feedbackError}
+              </p>
+            )}
+
+            {feedbackSuccess && (
+              <p className="text-xs text-emerald-400 mb-3 font-medium flex items-center gap-1.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Отзыв успешно сохранен!
+              </p>
+            )}
+            
+            <div className="flex justify-end gap-2.5 text-xs font-semibold">
+              <button
+                onClick={() => setFeedbackOpen(false)}
+                disabled={isSendingFeedback}
+                className="px-4 py-2.5 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Закрыть
+              </button>
+              <button
+                onClick={handleSendFeedback}
+                disabled={isSendingFeedback || !feedbackMessage.trim() || feedbackSuccess}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white transition-colors cursor-pointer flex items-center gap-2"
+              >
+                {isSendingFeedback ? (
+                  <>
+                    <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Отправка...
+                  </>
+                ) : (
+                  "Отправить"
+                )}
               </button>
             </div>
           </div>

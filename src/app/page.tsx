@@ -93,7 +93,7 @@ export default function Home() {
   const t = translations[lang];
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 md:p-24 relative overflow-hidden bg-neutral-950 select-none">
+    <main className="flex min-h-[100dvh] flex-col items-center justify-center p-6 md:p-24 relative overflow-hidden bg-neutral-950 select-none">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-neutral-800/10 via-neutral-900/5 to-black/90 -z-10"></div>
       
       {/* Language Switcher */}
@@ -154,7 +154,7 @@ export default function Home() {
                 if (e.target.value.trim()) setErrorMsg(false);
               }}
               placeholder={isMounted ? t.namePlaceholder : translations.ru.namePlaceholder}
-              className={`w-full bg-[#182533]/80 border ${errorMsg ? 'border-rose-500/50 focus:border-rose-500' : 'border-white/10 focus:border-blue-500/50'} rounded-2xl px-4 py-3 text-white text-sm focus:outline-none transition-all placeholder:text-neutral-600 font-light`}
+              className={`w-full bg-[#182533]/80 border ${errorMsg ? 'border-rose-500/50 focus:border-rose-500' : 'border-white/10 focus:border-blue-500/50'} rounded-2xl px-4 py-3 text-white text-[16px] md:text-sm focus:outline-none transition-all placeholder:text-neutral-600 font-light`}
             />
             {errorMsg && (
               <p className="text-[11px] text-rose-400 text-center animate-pulse">

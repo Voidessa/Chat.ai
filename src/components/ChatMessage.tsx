@@ -131,6 +131,7 @@ export default function ChatMessage({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [showMenu, setShowMenu] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   
   const [swipeOffset, setSwipeOffset] = useState(0);
   const touchStartRef = useRef<{x: number, y: number, time: number} | null>(null);
@@ -138,11 +139,14 @@ export default function ChatMessage({
   const isSwipingRef = useRef(false);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+    const clientY = e.touches[0].clientY;
+    touchStartRef.current = { x: e.touches[0].clientX, y: clientY, time: Date.now() };
     isSwipingRef.current = false;
     
     longPressTimerRef.current = setTimeout(() => {
       if (!isSwipingRef.current) {
+        const spaceBelow = window.innerHeight - clientY;
+        setOpenUpward(spaceBelow < 280);
         setShowMenu(true);
       }
     }, 450); // 450ms for long press
@@ -259,9 +263,11 @@ export default function ChatMessage({
         <button 
           onClick={(e) => {
             e.stopPropagation();
+            const spaceBelow = window.innerHeight - e.clientY;
+            setOpenUpward(spaceBelow < 280);
             setShowMenu(!showMenu);
           }}
-          className={`w-7 h-7 rounded-full bg-[#1c242f]/80 backdrop-blur-sm border border-white/5 flex items-center justify-center text-white/50 hover:text-white hover:bg-[#2b5278] transition-all opacity-0 group-hover:opacity-100 self-center mr-2 cursor-pointer shadow-md select-none ${showMenu ? 'opacity-100' : ''}`}
+          className={`w-7 h-7 rounded-full bg-[#1c242f]/80 backdrop-blur-sm border border-white/5 flex items-center justify-center text-white/50 hover:text-white hover:bg-[#2b5278] transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 self-center mr-2 cursor-pointer shadow-md select-none ${showMenu ? 'opacity-100' : ''}`}
           title="Опции"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -322,7 +328,7 @@ export default function ChatMessage({
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="w-full bg-black/35 border border-white/15 rounded-xl p-2.5 text-white text-[14px] focus:outline-none focus:border-blue-500/50 resize-none font-normal leading-normal"
+                    className="w-full bg-black/35 border border-white/15 rounded-xl p-2.5 text-white text-[16px] md:text-[14px] focus:outline-none focus:border-blue-500/50 resize-none font-normal leading-normal"
                     rows={3}
                     autoFocus
                   />
@@ -408,8 +414,10 @@ export default function ChatMessage({
         {/* Telegram Custom Context Menu Dropdown */}
         {showMenu && (
           <div 
-            className={`absolute z-50 w-52 bg-[#17212b] border border-white/10 rounded-xl p-1.5 telegram-context-menu text-white select-none ${
-              isUser ? "right-0 top-full mt-2" : "left-0 top-full mt-2"
+            className={`absolute z-50 w-52 bg-[#17212b] border border-white/10 rounded-xl p-1.5 telegram-context-menu text-white select-none shadow-2xl ${
+              openUpward 
+                ? (isUser ? "right-0 bottom-full mb-2" : "left-0 bottom-full mb-2")
+                : (isUser ? "right-0 top-full mt-2" : "left-0 top-full mt-2")
             }`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -482,7 +490,7 @@ export default function ChatMessage({
                 </button>
               )}
 
-              {isUser && !message.audioUrl && onEditMessage && (
+              {(isUser || tutorMode) && !message.audioUrl && onEditMessage && (
                 <button 
                   onClick={() => {
                     setEditContent(message.content);
@@ -556,9 +564,11 @@ export default function ChatMessage({
         <button 
           onClick={(e) => {
             e.stopPropagation();
+            const spaceBelow = window.innerHeight - e.clientY;
+            setOpenUpward(spaceBelow < 280);
             setShowMenu(!showMenu);
           }}
-          className={`w-7 h-7 rounded-full bg-[#1c242f]/80 backdrop-blur-sm border border-white/5 flex items-center justify-center text-white/50 hover:text-white hover:bg-[#2b5278] transition-all opacity-0 group-hover:opacity-100 self-center ml-2 cursor-pointer shadow-md select-none ${showMenu ? 'opacity-100' : ''}`}
+          className={`w-7 h-7 rounded-full bg-[#1c242f]/80 backdrop-blur-sm border border-white/5 flex items-center justify-center text-white/50 hover:text-white hover:bg-[#2b5278] transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 self-center ml-2 cursor-pointer shadow-md select-none ${showMenu ? 'opacity-100' : ''}`}
           title="Опции"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

@@ -45,7 +45,7 @@ export default function ChatHeader({
         {onToggleTutorMode && (
           <button 
             onClick={onToggleTutorMode}
-            className={`flex items-center gap-1.5 text-xs transition-all px-3 py-1.5 rounded-lg border ${
+            className={`flex items-center gap-1.5 text-xs transition-all px-3 py-1.5 rounded-lg border cursor-pointer ${
               tutorMode 
                 ? "bg-amber-500/10 text-amber-400 border-amber-500/30 font-medium" 
                 : "text-white/50 bg-white/5 border-transparent hover:border-white/10 hover:text-white/80"
@@ -53,14 +53,17 @@ export default function ChatHeader({
             title="Режим Куратора: редактирование реплик"
           >
             <span className={`w-1.5 h-1.5 rounded-full ${tutorMode ? "bg-amber-400 animate-pulse" : "bg-white/30"}`} />
-            <span className="hidden md:inline">Режим Куратора</span>
-            <span className="md:hidden">Куратор</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
+            <span className="hidden sm:inline">Куратор</span>
           </button>
         )}
         {onToggleSidebar && (
           <button 
             onClick={onToggleSidebar}
-            className={`flex items-center gap-1.5 text-xs transition-all px-3 py-1.5 rounded-lg border ${
+            className={`flex items-center gap-1.5 text-xs transition-all px-3 py-1.5 rounded-lg border cursor-pointer ${
               sidebarOpen 
                 ? "bg-blue-500/10 text-blue-400 border-blue-500/30 font-medium" 
                 : "text-white/50 bg-white/5 border-transparent hover:border-white/10 hover:text-white/80"
@@ -71,8 +74,7 @@ export default function ChatHeader({
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
               <line x1="9" y1="3" x2="9" y2="21"></line>
             </svg>
-            <span className="hidden md:inline">Настройки ИИ</span>
-            <span className="md:hidden">Настройки</span>
+            <span className="hidden sm:inline">Настройки</span>
           </button>
         )}
         {onResetMemory && (
