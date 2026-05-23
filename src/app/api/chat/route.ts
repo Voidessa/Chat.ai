@@ -28,7 +28,8 @@ export async function POST(req: Request) {
 
     const state = analyzeMiraState(messages, relationship);
     const userGender = body.userGender as "male" | "female" | undefined;
-    let systemPrompt = buildMiraSystemPrompt(memory, state, userGender);
+    const supportMode = body.supportMode === true;
+    let systemPrompt = buildMiraSystemPrompt(memory, state, userGender, supportMode);
 
     const userLocalTime = body.userLocalTime as string | undefined;
     const userLocalHour = body.userLocalHour as number | undefined;
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
         temperature: 0.95, // Higher temp for more varied vocabulary
         frequency_penalty: 0.7, // Punish exact string repetition
         presence_penalty: 0.6, // Encourage new topics and structure
-        max_tokens: 350
+        max_tokens: 800
       })
     });
 
@@ -163,8 +164,38 @@ export async function POST(req: Request) {
     }
 
     const data = await response.json();
-    const resultJson = JSON.parse(data.choices[0].message.content);
-    let replyContent = resultJson.replies;
+    const rawContent = data.choices[0]?.message?.content || "";
+    
+    let resultJson;
+    try {
+      resultJson = JSON.parse(rawContent);
+    } catch (parseError) {
+      console.error("Failed to parse AI JSON response, trying regex extract:", rawContent);
+      
+      // Parse failed - attempt regex extraction to prevent crashing
+      let repliesStr = "я немного задумалась, повтори еще раз)";
+      const repliesMatch = rawContent.match(/"replies"\s*:\s*"([^"]+)"/);
+      if (repliesMatch && repliesMatch[1]) {
+        repliesStr = repliesMatch[1];
+      } else {
+        // Fallback: strip JSON tags and clean
+        const cleanContent = rawContent.replace(/[{}]/g, "").replace(/"[^"]+"\s*:\s*/g, "").trim();
+        if (cleanContent.length > 5) {
+          repliesStr = cleanContent.split("\n")[0].replace(/"/g, "").trim();
+        }
+      }
+      
+      const replies = applyMiraVoiceRules(repliesStr).split("|").map((r: string) => r.trim()).filter(Boolean);
+      return NextResponse.json({ 
+        replies: replies.length ? replies : ["окей"], 
+        newFacts: [], 
+        newEmotionalNotes: [],
+        relationshipSummary: "Задумалась",
+        lastInteractionStatus: "friendly"
+      });
+    }
+
+    let replyContent = resultJson.replies || "";
     const newFacts = resultJson.newFacts || [];
     const newEmotionalNotes = resultJson.newEmotionalNotes || [];
     const relationshipSummary = resultJson.relationshipSummary || "";

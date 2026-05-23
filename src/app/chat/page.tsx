@@ -49,6 +49,8 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [memory, setMemory] = useState<MiraMemory>(defaultMemory);
   const [relationship, setRelationship] = useState<MiraRelationship>(defaultRelationship);
+  const [supportMode, setSupportMode] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [onlineStatus, setOnlineStatus] = useState<"в сети" | "был(а) недавно" | "печатает..." | "записывает голосовое...">("был(а) недавно");
   const [isMounted, setIsMounted] = useState(false);
   const [proactiveCount, setProactiveCount] = useState(0);
@@ -96,6 +98,7 @@ export default function ChatPage() {
   const customRulesRef = useRef(customRules);
   const userGenderRef = useRef(userGender);
   const testerIdRef = useRef(testerId);
+  const supportModeRef = useRef(supportMode);
   
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { memoryRef.current = memory; }, [memory]);
@@ -103,6 +106,7 @@ export default function ChatPage() {
   useEffect(() => { customRulesRef.current = customRules; }, [customRules]);
   useEffect(() => { userGenderRef.current = userGender; }, [userGender]);
   useEffect(() => { testerIdRef.current = testerId; }, [testerId]);
+  useEffect(() => { supportModeRef.current = supportMode; }, [supportMode]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -127,6 +131,9 @@ export default function ChatPage() {
 
       const savedTutorMode = localStorage.getItem("velora_tutor_mode");
       if (savedTutorMode === "true") setTutorMode(true);
+
+      const savedSupportMode = localStorage.getItem("velora_support_mode");
+      if (savedSupportMode === "true") setSupportMode(true);
       
       const savedRules = localStorage.getItem("velora_custom_rules");
       if (savedRules) setCustomRules(savedRules);
@@ -205,6 +212,36 @@ export default function ChatPage() {
     };
   }, [messages, isMounted]);
 
+  // Synchronize full chat history to the server automatically in real-time
+  useEffect(() => {
+    if (isMounted && messages.length > 0) {
+      const controller = new AbortController();
+      const runSync = async () => {
+        try {
+          await fetch("/api/chat/log", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              testerId,
+              userGender,
+              messages,
+              memory,
+              relationship
+            }),
+            signal: controller.signal
+          });
+        } catch (e) {
+          // Fail silently
+        }
+      };
+      const timer = setTimeout(runSync, 1500);
+      return () => {
+        clearTimeout(timer);
+        controller.abort();
+      };
+    }
+  }, [messages, memory, relationship, testerId, userGender, isMounted]);
+
   const executeProactiveAiReply = useCallback(async () => {
     if (isProcessingReply) return;
     setIsProcessingReply(true);
@@ -225,6 +262,7 @@ export default function ChatPage() {
           relationship: relationshipRef.current,
           customRules: customRulesRef.current,
           userGender: userGenderRef.current,
+          supportMode: supportModeRef.current,
           userLocalTime: new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }),
           userLocalHour: new Date().getHours(),
           isProactive: true,
@@ -350,6 +388,7 @@ export default function ChatPage() {
           relationship: relationshipRef.current,
           customRules: customRulesRef.current,
           userGender: userGenderRef.current,
+          supportMode: supportModeRef.current,
           userLocalTime: new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }),
           userLocalHour: new Date().getHours(),
           userIgnoredLastMessage: wasIgnoringRef.current || userIgnoredLastMessageRef.current
@@ -641,6 +680,50 @@ export default function ChatPage() {
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
     downloadAnchor.setAttribute("download", `mira_training_log_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleExportChatHistory = () => {
+    if (messages.length === 0) {
+      alert("История чата пуста.");
+      return;
+    }
+    const fullLog = {
+      testerId: testerId,
+      userGender: userGender,
+      supportMode: supportMode,
+      exportedAt: new Date().toISOString(),
+      relationship: {
+        stage: relationship.stage,
+        trust: relationship.trust,
+        respect: relationship.respect,
+        warmth: relationship.warmth,
+        irritation: relationship.irritation
+      },
+      memory: {
+        knownFacts: memory.knownFacts,
+        emotionalNotes: memory.emotionalNotes,
+        relationshipSummary: memory.relationshipSummary,
+        lastInteractionStatus: memory.lastInteractionStatus
+      },
+      messages: messages.map(msg => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        createdAt: msg.createdAt,
+        replyTo: msg.replyTo,
+        userReaction: msg.userReaction,
+        aiReaction: msg.aiReaction,
+        audioUrl: msg.audioUrl ? "Voice Message (TTS)" : undefined
+      }))
+    };
+    
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullLog, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `chat_history_${testerId || "tester"}_${new Date().toISOString().split('T')[0]}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -965,6 +1048,7 @@ export default function ChatPage() {
             placeholder={relationship.isBlocked ? "Вы заблокированы." : "Написать сообщение..."}
             replyToMessage={replyToMessage}
             onCancelReply={() => setReplyToMessage(null)}
+            onFocusChange={(focused) => setIsInputFocused(focused)}
           />
         </div>
       </div>
@@ -1039,6 +1123,42 @@ export default function ChatPage() {
                   }`}
                 >
                   Женщина
+                </button>
+              </div>
+            </div>
+
+            {/* Support/Friend Mode Toggle */}
+            <div className="bg-[#24303f]/50 border border-white/5 p-3.5 rounded-xl space-y-2">
+              <div className="text-[11px] uppercase tracking-wider text-neutral-400 font-semibold flex items-center">
+                <span>Режим «Подруга-Помощница»</span>
+                <InfoTooltip text="Включает режим эмпатичной поддержки. Мира будет мягче, станет чутко выслушивать, деликатно интересоваться вашим состоянием и помогать решать проблемы." />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setSupportMode(false);
+                    localStorage.setItem("velora_support_mode", "false");
+                  }}
+                  className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
+                    !supportMode 
+                      ? "bg-blue-600/20 text-blue-400 border-blue-500/30" 
+                      : "bg-black/20 text-neutral-500 border-transparent hover:text-neutral-400"
+                  }`}
+                >
+                  Обычный
+                </button>
+                <button
+                  onClick={() => {
+                    setSupportMode(true);
+                    localStorage.setItem("velora_support_mode", "true");
+                  }}
+                  className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
+                    supportMode 
+                      ? "bg-[#f43f5e]/20 text-[#f43f5e] border-[#f43f5e]/30" 
+                      : "bg-black/20 text-neutral-500 border-transparent hover:text-neutral-400"
+                  }`}
+                >
+                  Подруга
                 </button>
               </div>
             </div>
@@ -1165,7 +1285,7 @@ export default function ChatPage() {
               </div>
             </div>
 
-            {/* Training Logs */}
+             {/* Training Logs */}
             <div className="space-y-3 bg-[#24303f]/30 border border-white/5 p-3.5 rounded-xl">
               <div className="flex justify-between items-center">
                 <span className="text-[11px] uppercase tracking-wider text-neutral-400 font-semibold flex items-center">
@@ -1193,6 +1313,22 @@ export default function ChatPage() {
                 className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white rounded-lg text-xs font-semibold tracking-wide transition-all shadow-md active:scale-95 cursor-pointer disabled:cursor-not-allowed"
               >
                 Скачать журнал правок (.JSON)
+              </button>
+            </div>
+
+            {/* Full Chat History Log */}
+            <div className="space-y-3 bg-[#24303f]/30 border border-white/5 p-3.5 rounded-xl">
+              <div className="text-[11px] uppercase tracking-wider text-neutral-400 font-semibold flex items-center">
+                <span>Журнал чата ({messages.length})</span>
+                <InfoTooltip text="Полная история переписки со всеми деталями, эмоциями и фактами. Сохраняется на сервере в реальном времени." />
+              </div>
+              
+              <button
+                onClick={handleExportChatHistory}
+                disabled={messages.length === 0}
+                className="w-full py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white rounded-lg text-xs font-semibold tracking-wide transition-all shadow-md active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+              >
+                Скачать историю чата (.JSON)
               </button>
             </div>
 
@@ -1295,7 +1431,11 @@ export default function ChatPage() {
       <button
         onClick={() => setFeedbackOpen(true)}
         className={`fixed z-40 transition-all duration-300 bg-[#17212b]/90 backdrop-blur-md border border-white/10 hover:border-white/20 text-white rounded-full px-3.5 py-2 shadow-2xl flex items-center justify-center gap-2 hover:scale-105 active:scale-95 cursor-pointer select-none text-xs font-semibold ${
-          sidebarOpen ? "right-4 lg:right-[336px] bottom-[84px]" : "right-4 bottom-[84px]"
+          sidebarOpen ? "right-4 lg:right-[336px]" : "right-4"
+        } ${
+          replyToMessage ? "bottom-[136px]" : "bottom-[84px]"
+        } ${
+          isInputFocused ? "max-sm:opacity-0 max-sm:pointer-events-none" : "opacity-100"
         }`}
         title="Обратная связь по проекту"
       >
