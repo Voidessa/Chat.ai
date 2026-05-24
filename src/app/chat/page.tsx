@@ -332,15 +332,26 @@ export default function ChatPage() {
     }
   }, [isProcessingReply]);
 
-  // Proactive messages logic
+  // LocalStorage Sync
   useEffect(() => {
     if (isMounted) {
       localStorage.setItem("velora_messages", JSON.stringify(messages));
       localStorage.setItem("velora_mira_memory", JSON.stringify(memory));
       localStorage.setItem("velora_mira_relationship", JSON.stringify(relationship));
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    
+  }, [messages, memory, relationship, isMounted]);
+
+  // Scrolling logic
+  useEffect(() => {
+    const isTyping = onlineStatus === "печатает..." || onlineStatus === "записывает голосовое...";
+    const timer = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [messages, onlineStatus === "печатает...", onlineStatus === "записывает голосовое..."]);
+
+  // Proactive messages logic
+  useEffect(() => {
     if (proactiveTimerRef.current) clearTimeout(proactiveTimerRef.current);
     
     const lastMsg = messages[messages.length - 1];
@@ -361,7 +372,7 @@ export default function ChatPage() {
     return () => {
       if (proactiveTimerRef.current) clearTimeout(proactiveTimerRef.current);
     };
-  }, [messages, isMounted, onlineStatus, proactiveCount, memory, relationship, executeProactiveAiReply]);
+  }, [messages, isMounted, onlineStatus, proactiveCount, relationship, executeProactiveAiReply]);
 
   const executeAiReply = async () => {
     if (isProcessingReply) return;
@@ -434,9 +445,10 @@ export default function ChatPage() {
              const reactType = reactionMatch[1].toLowerCase() as "heart" | "laugh" | "sad" | "angry";
              setMessages(prev => {
                 const updated = [...prev];
-                const lastUser = updated.slice().reverse().find(m => m.role === 'user');
-                if (lastUser) {
-                  lastUser.aiReaction = reactType;
+                const lastUserIdx = updated.slice().reverse().findIndex(m => m.role === 'user');
+                if (lastUserIdx !== -1) {
+                  const actualIdx = updated.length - 1 - lastUserIdx;
+                  updated[actualIdx] = { ...updated[actualIdx], aiReaction: reactType };
                 }
                 return updated;
              });

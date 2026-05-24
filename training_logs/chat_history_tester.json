@@ -1,0 +1,59 @@
+{
+  "testerId": "Tester",
+  "userGender": "male",
+  "lastUpdated": "2026-05-24T12:13:07.043Z",
+  "relationship": {
+    "stage": "guarded",
+    "trust": 14,
+    "respect": 30,
+    "curiosity": 15,
+    "warmth": 9,
+    "irritation": 0,
+    "distance": 80,
+    "userAskedToStop": false
+  },
+  "memory": {
+    "knownFacts": [],
+    "emotionalNotes": [
+      "непонятно, что происходит"
+    ],
+    "messageCount": 3,
+    "cycleSeedDay": 6,
+    "currentEvent": {
+      "id": "drama_1779624731164",
+      "title": "Драма с подругой",
+      "description": "Поссорилась с Машей в метро потому что она не ответила на важный звонок.",
+      "impact": "sad",
+      "narrativeDescription": "Она немного грустная или раздраженная, крутит в голове этот конфликт, может жаловаться на женскую дружбу и вредность подруг."
+    },
+    "lastEventCheckDate": "2026-05-24",
+    "relationshipSummary": "Неясная ситуация, держу дистанцию и наблюдаю",
+    "lastInteractionStatus": "cold",
+    "userName": "Tester"
+  },
+  "messages": [
+    {
+      "id": "1779624776288",
+      "role": "user",
+      "content": "Hello",
+      "createdAt": "2026-05-24T12:12:56.288Z",
+      "status": "read"
+    },
+    {
+      "id": "17796247845160",
+      "role": "assistant",
+      "content": "привет",
+      "createdAt": "2026-05-24T12:13:04.516Z",
+      "replyTo": {
+        "id": "1779624776288",
+        "content": "Hello"
+      }
+    },
+    {
+      "id": "17796247855321",
+      "role": "assistant",
+      "content": "как дела?",
+      "createdAt": "2026-05-24T12:13:05.532Z"
+    }
+  ]
+}
