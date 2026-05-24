@@ -165,13 +165,7 @@ export default function ChatPage() {
           setMessages(JSON.parse(savedMessages));
         } catch { }
       } else {
-        const initialMessage: Message = {
-          id: "init",
-          role: "assistant",
-          content: "Привет. Только чур без душных 'как дела' )",
-          createdAt: new Date().toISOString()
-        };
-        setMessages([initialMessage]);
+        setMessages([]);
       }
 
       const savedPinned = localStorage.getItem("velora_pinned_message");
