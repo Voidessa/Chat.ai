@@ -88,6 +88,8 @@ export default function ChatPage() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const proactiveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const ignoreDetectionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const deviceIdRef = useRef<string | null>(null);
   const offlineTimerRef = useRef<NodeJS.Timeout | null>(null);
   const replyTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -160,9 +162,11 @@ export default function ChatPage() {
         try { setRelationship(JSON.parse(savedRelationship)); } catch { }
       }
 
+      let initialMessages: Message[] = [];
       if (savedMessages) {
         try {
-          setMessages(JSON.parse(savedMessages));
+          initialMessages = JSON.parse(savedMessages);
+          setMessages(initialMessages);
         } catch { }
       } else {
         setMessages([]);
@@ -172,6 +176,35 @@ export default function ChatPage() {
       if (savedPinned) {
         try { setPinnedMessage(JSON.parse(savedPinned)); } catch { }
       }
+
+      // Sync with device ID for persistence
+      let dId = localStorage.getItem("velora_device_id");
+      if (!dId) {
+        const match = document.cookie.match(/(?:^|; )velora_device_id=([^;]*)/);
+        if (match) dId = match[1];
+      }
+      if (!dId) {
+        dId = "dev_" + Math.random().toString(36).substring(2, 15);
+      }
+      localStorage.setItem("velora_device_id", dId);
+      document.cookie = `velora_device_id=${dId}; max-age=315360000; path=/`;
+      deviceIdRef.current = dId;
+
+      fetch(`/api/chat/sync?deviceId=${dId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (!data.error && !data.notFound && data.messages) {
+             if (data.messages.length > initialMessages.length) {
+                setMessages(data.messages);
+                if (data.memory) setMemory(data.memory);
+                if (data.relationship) setRelationship(data.relationship);
+                localStorage.setItem("velora_messages", JSON.stringify(data.messages));
+                localStorage.setItem("velora_mira_memory", JSON.stringify(data.memory));
+                localStorage.setItem("velora_mira_relationship", JSON.stringify(data.relationship));
+             }
+          }
+        }).catch(() => {});
+
     }, 0);
   }, []);
 
@@ -224,6 +257,21 @@ export default function ChatPage() {
             }),
             signal: controller.signal
           });
+          
+          if (deviceIdRef.current) {
+            await fetch("/api/chat/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                deviceId: deviceIdRef.current,
+                testerId,
+                messages,
+                memory,
+                relationship
+              }),
+              signal: controller.signal
+            });
+          }
         } catch (e) {
           // Fail silently
         }
@@ -251,6 +299,8 @@ export default function ChatPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
+          deviceId: deviceIdRef.current,
+          testerId,
           messages: currentMessages, 
           memory: memoryRef.current, 
           relationship: relationshipRef.current,
@@ -388,6 +438,8 @@ export default function ChatPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
+          deviceId: deviceIdRef.current,
+          testerId,
           messages: currentMessages, 
           memory: memoryRef.current, 
           relationship: relationshipRef.current,
@@ -612,6 +664,9 @@ export default function ChatPage() {
   const handleClear = () => {
     localStorage.removeItem("velora_messages");
     setMessages([]);
+    if (deviceIdRef.current) {
+      fetch(`/api/chat/sync?deviceId=${deviceIdRef.current}`, { method: 'DELETE' }).catch(() => {});
+    }
   };
 
   const handleResetMemory = () => {
@@ -852,6 +907,8 @@ export default function ChatPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
+          deviceId: deviceIdRef.current,
+          testerId,
           messages: currentMessages, 
           memory: memoryRef.current, 
           relationship: relationshipRef.current,

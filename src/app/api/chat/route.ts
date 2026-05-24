@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
 import { analyzeMiraState } from "@/lib/character/miraState";
 import { buildMiraSystemPrompt } from "@/lib/character/miraPromptBuilder";
 import { defaultRelationship } from "@/lib/character/miraRelationship";
@@ -12,6 +14,8 @@ export async function POST(req: Request) {
     const relationship = body.relationship || defaultRelationship;
     const memory = body.memory || { knownFacts: [], emotionalNotes: [], messageCount: 0 };
     const deletedMessage = body.deletedMessage as { content: string; role: "user" | "assistant"; id: string } | undefined;
+    const deviceId = body.deviceId || "unknown_device";
+    const testerId = body.testerId || "unknown_tester";
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
@@ -208,6 +212,30 @@ export async function POST(req: Request) {
     if (replies.length === 0) {
       replies.push("окей");
     }
+
+    // --- GLOBAL DATASET LOGGING ---
+    try {
+      const DATASET_DIR = path.join(process.cwd(), "training_logs");
+      if (!fs.existsSync(DATASET_DIR)) {
+        fs.mkdirSync(DATASET_DIR, { recursive: true });
+      }
+      const datasetPath = path.join(DATASET_DIR, "global_dataset.jsonl");
+      
+      const logEntry = {
+        timestamp: new Date().toISOString(),
+        deviceId,
+        testerId,
+        userMessage: messages.length > 0 ? messages[messages.length - 1].content : "",
+        aiReplies: replies,
+        relationshipSummary,
+        lastInteractionStatus
+      };
+      
+      fs.appendFileSync(datasetPath, JSON.stringify(logEntry) + "\n", "utf-8");
+    } catch (logErr) {
+      console.error("Failed to append to global dataset:", logErr);
+    }
+    // -----------------------------
 
     return NextResponse.json({ 
       replies, 

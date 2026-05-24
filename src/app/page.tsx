@@ -20,7 +20,8 @@ const translations = {
     namePlaceholder: "Your name or nickname...",
     nameRequired: "Please enter your name first",
     footer: "AI character. Not a real person. For entertainment and companionship only.",
-    langName: "English"
+    langName: "English",
+    disclaimer: "I understand I am talking to an AI. I agree that some anonymized data may be randomly collected to improve the project, and developers bear no responsibility for data storage and protection."
   },
   ru: {
     subtitle: "Она помнит. Она замечает. Она становится ближе с каждым разговором.",
@@ -30,7 +31,8 @@ const translations = {
     namePlaceholder: "Ваше имя или никнейм...",
     nameRequired: "Пожалуйста, введите имя перед началом",
     footer: "ИИ-персонаж. Не настоящий человек. Только для развлечения и общения.",
-    langName: "Русский"
+    langName: "Русский",
+    disclaimer: "Я понимаю, что общаюсь с ИИ. Я согласен(на), что часть обезличенных данных может случайным образом собираться для улучшения проекта, а авторы не несут ответственности за их хранение и защиту."
   },
   uz: {
     subtitle: "U eslab qoladi. U sezadi. Har safar gaplashganingizda u yaqinroq bo'ladi.",
@@ -40,7 +42,8 @@ const translations = {
     namePlaceholder: "Ismingiz yoki taxallusingiz...",
     nameRequired: "Iltimos, boshlashdan oldin ismingizni kiriting",
     footer: "Sun'iy intellekt personaji. Haqiqiy odam emas. Faqat ko'ngilochar va suhbatdoshlik maqsadida.",
-    langName: "O'zbekcha"
+    langName: "O'zbekcha",
+    disclaimer: "Men AI bilan gaplashayotganimni tushunaman. Loyihani yaxshilash uchun ba'zi anonim ma'lumotlar tasodifiy to'planishiga va mualliflar uni saqlash uchun javobgar emasligiga roziman."
   }
 };
 
@@ -49,6 +52,7 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [userName, setUserName] = useState("");
   const [errorMsg, setErrorMsg] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -69,6 +73,10 @@ export default function Home() {
   };
 
   const handleGenderSelect = (gender: 'male' | 'female', e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!agreedToTerms) {
+      e.preventDefault();
+      return;
+    }
     if (!userName.trim()) {
       e.preventDefault();
       setErrorMsg(true);
@@ -163,11 +171,29 @@ export default function Home() {
             )}
           </div>
           
+          {/* Disclaimer Checkbox */}
+          <div className="mb-6 flex items-start space-x-3 text-left bg-black/20 p-3 rounded-xl border border-white/5">
+            <input 
+              type="checkbox" 
+              id="disclaimer"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mt-0.5 min-w-[16px] w-4 h-4 rounded border-white/10 bg-[#182533]/80 focus:ring-blue-500/50 accent-blue-500 cursor-pointer"
+            />
+            <label htmlFor="disclaimer" className="text-[10px] md:text-xs text-neutral-400 font-light leading-relaxed cursor-pointer select-none flex-1">
+              {isMounted ? t.disclaimer : translations.ru.disclaimer}
+            </label>
+          </div>
+          
           <div className="space-y-3">
             <Link 
               href="/chat"
               onClick={(e) => handleGenderSelect('male', e)}
-              className="block w-full py-3 px-4 bg-blue-600/10 hover:bg-blue-600/20 text-blue-300 hover:text-blue-200 rounded-2xl transition-all duration-300 font-medium tracking-wider border border-blue-500/20 hover:border-blue-500/40 active:scale-[0.98] text-center"
+              className={`block w-full py-3 px-4 rounded-2xl transition-all duration-300 font-medium tracking-wider text-center ${
+                agreedToTerms 
+                  ? "bg-blue-600/10 hover:bg-blue-600/20 text-blue-300 hover:text-blue-200 border border-blue-500/20 hover:border-blue-500/40 active:scale-[0.98]" 
+                  : "bg-white/5 text-neutral-500 border border-transparent cursor-not-allowed pointer-events-none"
+              }`}
             >
               {isMounted ? t.buttonMale : translations.ru.buttonMale}
             </Link>
@@ -175,7 +201,11 @@ export default function Home() {
             <Link 
               href="/chat"
               onClick={(e) => handleGenderSelect('female', e)}
-              className="block w-full py-3 px-4 bg-rose-600/10 hover:bg-rose-600/20 text-rose-300 hover:text-rose-200 rounded-2xl transition-all duration-300 font-medium tracking-wider border border-rose-500/20 hover:border-rose-500/40 active:scale-[0.98] text-center"
+              className={`block w-full py-3 px-4 rounded-2xl transition-all duration-300 font-medium tracking-wider text-center ${
+                agreedToTerms
+                  ? "bg-rose-600/10 hover:bg-rose-600/20 text-rose-300 hover:text-rose-200 border border-rose-500/20 hover:border-rose-500/40 active:scale-[0.98]"
+                  : "bg-white/5 text-neutral-500 border border-transparent cursor-not-allowed pointer-events-none"
+              }`}
             >
               {isMounted ? t.buttonFemale : translations.ru.buttonFemale}
             </Link>
