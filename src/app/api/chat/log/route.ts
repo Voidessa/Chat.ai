@@ -20,6 +20,19 @@ export async function POST(req: Request) {
 
     const filePath = path.join(LOGS_DIR, `chat_history_${testerId}.json`);
     
+    if (data.sessionDurationSeconds) {
+      const sessionLogPath = path.join(LOGS_DIR, "session_logs.jsonl");
+      const sessionEntry = {
+        timestamp: new Date().toISOString(),
+        testerId: data.testerId,
+        userName: data.userName || "Unknown",
+        sessionDurationSeconds: data.sessionDurationSeconds,
+        userGender: data.userGender,
+        messageCount: data.messages ? data.messages.length : 0
+      };
+      fs.appendFileSync(sessionLogPath, JSON.stringify(sessionEntry) + "\n", "utf-8");
+    }
+
     // Write full chat history state
     fs.writeFileSync(filePath, JSON.stringify({
       testerId: data.testerId,

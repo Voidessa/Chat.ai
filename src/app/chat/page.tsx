@@ -92,6 +92,7 @@ export default function ChatPage() {
   const deviceIdRef = useRef<string | null>(null);
   const offlineTimerRef = useRef<NodeJS.Timeout | null>(null);
   const replyTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionStartTimeRef = useRef<number>(Date.now());
 
   // Refs for current state to be used inside timeouts
   const messagesRef = useRef(messages);
@@ -250,6 +251,8 @@ export default function ChatPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               testerId,
+              userName: memory.userName,
+              sessionDurationSeconds: Math.floor((Date.now() - sessionStartTimeRef.current) / 1000),
               userGender,
               messages,
               memory,
@@ -265,6 +268,8 @@ export default function ChatPage() {
               body: JSON.stringify({
                 deviceId: deviceIdRef.current,
                 testerId,
+                userName: memory.userName,
+                sessionDurationSeconds: Math.floor((Date.now() - sessionStartTimeRef.current) / 1000),
                 messages,
                 memory,
                 relationship
@@ -301,6 +306,8 @@ export default function ChatPage() {
         body: JSON.stringify({ 
           deviceId: deviceIdRef.current,
           testerId,
+          userName: memoryRef.current.userName,
+          sessionDurationSeconds: Math.floor((Date.now() - sessionStartTimeRef.current) / 1000),
           messages: currentMessages, 
           memory: memoryRef.current, 
           relationship: relationshipRef.current,
@@ -440,6 +447,8 @@ export default function ChatPage() {
         body: JSON.stringify({ 
           deviceId: deviceIdRef.current,
           testerId,
+          userName: memoryRef.current.userName,
+          sessionDurationSeconds: Math.floor((Date.now() - sessionStartTimeRef.current) / 1000),
           messages: currentMessages, 
           memory: memoryRef.current, 
           relationship: relationshipRef.current,
@@ -597,7 +606,7 @@ export default function ChatPage() {
 
 
 
-  const handleSend = async (content: string) => {
+  const handleSend = async (content: string, imageUrl?: string) => {
     // Capture user ignore status before sending the new message
     wasIgnoringRef.current = userIgnoredLastMessageRef.current;
 
@@ -605,6 +614,7 @@ export default function ChatPage() {
       id: Date.now().toString(),
       role: "user",
       content,
+      imageUrl,
       createdAt: new Date().toISOString(),
       status: "sent",
       ...(replyToMessage ? { replyTo: { id: replyToMessage.id, content: replyToMessage.content } } : {})

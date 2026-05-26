@@ -16,6 +16,8 @@ export async function POST(req: Request) {
     const deletedMessage = body.deletedMessage as { content: string; role: "user" | "assistant"; id: string } | undefined;
     const deviceId = body.deviceId || "unknown_device";
     const testerId = body.testerId || "unknown_tester";
+    const userName = body.userName || "Unknown";
+    const sessionDurationSeconds = body.sessionDurationSeconds || 0;
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
@@ -112,19 +114,28 @@ export async function POST(req: Request) {
 
     // Keep only last 20 messages for context window, skip empty
     const recentMessages = messages
-      .filter((msg: Message) => msg.content && msg.content.trim() !== "")
+      .filter((msg: Message) => (msg.content && msg.content.trim() !== "") || msg.imageUrl)
       .slice(-20);
 
     const apiMessages = [
       { role: "system", content: systemPrompt },
       ...recentMessages.map((msg: Message) => {
-        let content = msg.content;
+        let textContent = msg.content;
         if (msg.replyTo) {
-          content = `[В ответ на сообщение: "${msg.replyTo.content}"]\n${content}`;
+          textContent = `[В ответ на сообщение: "${msg.replyTo.content}"]\n${textContent}`;
         }
+        
+        let finalContent: any = textContent;
+        if (msg.imageUrl) {
+          finalContent = [
+            { type: "text", text: textContent || "Изображение" },
+            { type: "image_url", image_url: { url: msg.imageUrl } }
+          ];
+        }
+        
         return {
           role: msg.role === "user" ? "user" : "assistant",
-          content: content
+          content: finalContent
         };
       })
     ];
@@ -225,7 +236,10 @@ export async function POST(req: Request) {
         timestamp: new Date().toISOString(),
         deviceId,
         testerId,
+        userName,
+        sessionDurationSeconds,
         userMessage: messages.length > 0 ? messages[messages.length - 1].content : "",
+        hasImage: messages.length > 0 ? !!messages[messages.length - 1].imageUrl : false,
         aiReplies: replies,
         relationshipSummary,
         lastInteractionStatus

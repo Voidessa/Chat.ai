@@ -315,6 +315,12 @@ export default function ChatMessage({
 
         {/* Main Content Area */}
         <div className="flex flex-col gap-0.5">
+          {message.imageUrl && (
+            <div className="mb-2 max-w-[280px] sm:max-w-[320px]">
+              <img src={message.imageUrl} alt="Attached photo" className="rounded-xl border border-white/10 w-full h-auto object-cover" />
+            </div>
+          )}
+          
           {message.audioUrl && (
             <div className="mb-1">
               <VoiceMessagePlayer audioUrl={message.audioUrl} isUser={isUser} />
