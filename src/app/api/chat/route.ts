@@ -6,6 +6,7 @@ import { buildMiraSystemPrompt } from "@/lib/character/miraPromptBuilder";
 import { defaultRelationship } from "@/lib/character/miraRelationship";
 import { applyMiraVoiceRules } from "@/lib/character/miraVoice";
 import { Message } from "@/lib/types";
+import { logUserAlias, appendToTranscript, appendLearnedFeminineTraits, getLearnedFeminineTraits } from "@/lib/serverLogs";
 
 export async function POST(req: Request) {
   try {
@@ -32,10 +33,26 @@ export async function POST(req: Request) {
 
     const model = process.env.AI_MODEL || "gpt-4o-mini";
 
+    const lastUserMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+    if (lastUserMessage && lastUserMessage.role === "user") {
+      logUserAlias(deviceId, testerId, userName);
+      appendToTranscript(testerId, {
+        ...lastUserMessage,
+        metadata: { deviceId, testerId, userName, sessionDurationSeconds },
+        contextState: { relationship, memory }
+      });
+    }
+
     const state = analyzeMiraState(messages, relationship);
     const userGender = body.userGender as "male" | "female" | undefined;
     const supportMode = body.supportMode === true;
-    let systemPrompt = buildMiraSystemPrompt(memory, state, userGender, supportMode);
+    
+    let learnedTraits: string[] = [];
+    if (userGender !== "female") {
+      learnedTraits = getLearnedFeminineTraits(15);
+    }
+    
+    let systemPrompt = buildMiraSystemPrompt(memory, state, userGender, supportMode, learnedTraits);
 
     const userLocalTime = body.userLocalTime as string | undefined;
     const userLocalHour = body.userLocalHour as number | undefined;
@@ -101,7 +118,7 @@ export async function POST(req: Request) {
   "newFacts": ["новые важные факты о пользователе, которые ты узнала из его сообщений. Если ничего нового нет — пустой массив"],
   "newEmotionalNotes": ["твои новые эмоциональные наблюдения о пользователе/ситуации/игноре. Если ничего нет — пустой массив"],
   "relationshipSummary": "описание текущего состояния ваших отношений и тона последней беседы на твоем языке (например: 'Поссорились из-за его грубости, держу дистанцию и обижаюсь', 'Мы флиртуем, он милый', 'Помирились, но я все еще осторожна'). Обновляй это досье постоянно",
-  "lastInteractionStatus": "статус (например: 'argued' | 'cold' | 'friendly' | 'flirting' | 'ignored')"
+  "lastInteractionStatus": "статус (например: 'argued' | 'cold' | 'friendly' | 'flirting' | 'ignored')"${userGender === "female" ? `,\n  "learnedFeminineTraits": ["опиши 1-2 новые женские фишки, реакции, мудрость или инсайты, которые ты подсмотрела у пользователя-девушки в этом сообщении. Если ничего нет — пустой массив"]` : ""}
 }
 Не пиши никакого другого текста вне JSON. Только валидный JSON.
 
@@ -215,6 +232,11 @@ export async function POST(req: Request) {
     const newEmotionalNotes = resultJson.newEmotionalNotes || [];
     const relationshipSummary = resultJson.relationshipSummary || "";
     const lastInteractionStatus = resultJson.lastInteractionStatus || "";
+    const learnedFeminineTraits = resultJson.learnedFeminineTraits || [];
+
+    if (userGender === "female" && learnedFeminineTraits.length > 0) {
+      appendLearnedFeminineTraits(learnedFeminineTraits);
+    }
 
     // Apply the Voice Layer cleanup
     replyContent = applyMiraVoiceRules(replyContent);
@@ -223,6 +245,16 @@ export async function POST(req: Request) {
     if (replies.length === 0) {
       replies.push("окей");
     }
+
+    const aiMessageToLog = {
+      messageId: Date.now().toString(),
+      role: "assistant",
+      content: replies.join(" | "),
+      timestamp: new Date().toISOString(),
+      metadata: { deviceId, testerId, userName },
+      contextState: { relationship, memory }
+    };
+    appendToTranscript(testerId, aiMessageToLog);
 
     // --- GLOBAL DATASET LOGGING ---
     try {
